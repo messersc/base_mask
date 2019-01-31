@@ -1,0 +1,6 @@
+# Translating base masks
+
+Bits of python to check and convert base mask strings for demultiplexing sequencing data,
+e.g. to go from "151T8B" to "y151,I8" to feed into bcl2fastq.
+
+For more examples, see the tests.
