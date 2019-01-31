@@ -16,13 +16,13 @@ def split_bases_mask(bases_mask):
 
     # Check that mask is well-behaved
     if splitat[0] == 0:
-        raise "Mask must start with number of cycles, not type"
+        raise BaseMaskConfigException("Mask must start with number of cycles, not type")
     # Check that no characters appear next to each other
     diffs = []
     for i in range(len(splitat) - 1):
         diffs.append(splitat[i + 1] - splitat[i])
     if (0 in diffs) or (1 in diffs):
-        raise "Type characters must be separated by cycles"
+        raise BaseMaskConfigException("Type characters must be separated by a number (of cycles)")
 
     result = []
     num = ""
@@ -48,7 +48,7 @@ def compare_bases_mask(planned_reads, bases_mask):
     lengths1 = [i[1] for i in planned]
     lengths2 = [i[1] for i in mask]
     if not sum(lengths1) == sum(lengths2):
-        return False
+        raise BaseMaskConfigException("Your base mask has more or fewer cycles than planned")
 
     matched_mask = []
     for type, cycles in planned:
@@ -59,7 +59,7 @@ def compare_bases_mask(planned_reads, bases_mask):
             read.append(i)
             s += i[1]
         if s > cycles:
-            raise "Your base mask has too many bases for a window"
+            raise BaseMaskConfigException("Your base mask has too many bases for a window")
         matched_mask.append(read)
 
     return matched_mask
