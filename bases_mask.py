@@ -17,7 +17,7 @@ def split_bases_mask(bases_mask):
     # Check that mask is well-behaved
     if splitat[0] == 0:
         raise BaseMaskConfigException("Mask must start with number of cycles, not type")
-    # Check that no characters appear next to each other
+    # Check that no letters appear next to each other
     diffs = []
     for i in range(len(splitat) - 1):
         diffs.append(splitat[i + 1] - splitat[i])
@@ -27,12 +27,12 @@ def split_bases_mask(bases_mask):
     result = []
     num = ""
     for i in range(len(bases_mask)):
-        if not i in splitat:
+        if i not in splitat:
             num += bases_mask[i]
         elif int(num) == 0:
             pass
         else:
-            result.append((bases_mask[i], int(num)))
+            result.append((bases_mask[i].upper(), int(num)))
             num = ""
 
     return result
@@ -40,7 +40,7 @@ def split_bases_mask(bases_mask):
 
 def compare_bases_mask(planned_reads, bases_mask):
     """Match user input bases mask to planned_reads from flowcell
-    and decide if compatible."""
+    and decide if compatible. Return list of lists of tuples with type and number of cycles"""
 
     planned = split_bases_mask(planned_reads)
     mask = split_bases_mask(bases_mask)
@@ -59,7 +59,38 @@ def compare_bases_mask(planned_reads, bases_mask):
             read.append(i)
             s += i[1]
         if s > cycles:
-            raise BaseMaskConfigException("Your base mask has too many bases for a window")
+            raise BaseMaskConfigException(
+                "Your base mask has more or fewer cycles than planned for a read"
+            )
         matched_mask.append(read)
 
     return matched_mask
+
+
+def translate_tuple_to_basemask(tup, demux_tool):
+    """Return illumina or picard-style base mask string"""
+
+    picard_to_illumina = {"T": "y", "S": "n", "B": "I"}
+
+    if demux_tool == "bcl2fastq":
+        return picard_to_illumina[tup[0]] + str(tup[1])
+    else:
+        return str(tup[1]) + tup[0]
+
+
+def return_base_mask(planned_reads, demux_reads, demux_tool="bcl2fastq"):
+    """Parse planned_reads and demux_reads (user-configured base mask), compare for compatiblity
+    and return a string to either give to bcl2fastq or picard"""
+
+    if "M" in demux_reads and demux_tool == "bcl2fastq":
+        raise BaseMaskConfigException("You cannot assign UMIs ('M') if using bcl2fastq")
+
+    mask_list = compare_bases_mask(planned_reads, demux_reads)
+
+    new_mask = []
+    for lst in mask_list:
+        substr = ""
+        for t in lst:
+            substr += translate_tuple_to_basemask(t, demux_tool)
+        new_mask.append(substr)
+    return ",".join(new_mask) if demux_tool == "bcl2fastq" else "".join(new_mask)
